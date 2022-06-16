@@ -143,9 +143,6 @@ object LocationUtils {
         if (locationListener != null) {
             mLocationListener = locationListener
         }
-        if (listener == null) {
-            listener = MyLocationListener()
-        }
         val manager = getLocationManager(context)
         if (ActivityCompat.checkSelfPermission(
                 context,
@@ -177,22 +174,20 @@ object LocationUtils {
      * 取消定位监听
      */
     fun unRegisterListener(context: Context) {
-        if (listener != null) {
-            val manager = getLocationManager(context)
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return
-            }
-            //移除定位监听
-            manager.removeUpdates(listener)
+        val manager = getLocationManager(context)
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+            && ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
         }
+        //移除定位监听
+        manager.removeUpdates(listener)
     }
 
     private fun getLocationManager(context: Context): LocationManager {

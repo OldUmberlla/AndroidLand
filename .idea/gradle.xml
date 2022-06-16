@@ -12,6 +12,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/Lib_Base" />
+            <option value="$PROJECT_DIR$/Lib_FaceScan" />
             <option value="$PROJECT_DIR$/Lib_Http" />
             <option value="$PROJECT_DIR$/Lib_Location" />
             <option value="$PROJECT_DIR$/Lib_TrafficStatistic" />
