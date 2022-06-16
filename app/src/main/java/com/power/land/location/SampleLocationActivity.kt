@@ -1,19 +1,17 @@
 package com.power.land.location
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Criteria
 import android.location.Location
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import com.blankj.utilcode.util.LogUtils
+import com.power.base.utils.CrashHandler
+import com.power.base.utils.LogUtils
 import com.power.land.R
 import com.power.location.LocationUtils
 
@@ -55,6 +53,8 @@ class SampleLocationActivity : AppCompatActivity() {
             getBestLocation()
         }
         initLocationListener()
+
+        CrashHandler.testCrash()
     }
 
     /**
@@ -64,10 +64,10 @@ class SampleLocationActivity : AppCompatActivity() {
         val gps = LocationUtils.getGPSLocation(this)
         if (gps == null) {
             showTv("getGPSLocation gps location is null")
-            LogUtils.d("$TAG getGPSLocation gps location is null")
+            LogUtils.d(TAG, "getGPSLocation gps location is null")
         } else {
             showTv("getGPSLocation lat==${gps.latitude} lng==${gps.longitude}")
-            LogUtils.d("$TAG getGPSLocation lat==${gps.latitude} lng==${gps.longitude}")
+            LogUtils.d(TAG, "getGPSLocation lat==${gps.latitude} lng==${gps.longitude}")
         }
     }
 
@@ -78,10 +78,10 @@ class SampleLocationActivity : AppCompatActivity() {
         val net = LocationUtils.getNetWorkLocation(this)
         if (net == null) {
             showTv("getNetworkLocation gps location is null")
-            LogUtils.d("$TAG getNetworkLocation gps location is null")
+            LogUtils.d(TAG, "getNetworkLocation gps location is null")
         } else {
             showTv("getNetworkLocation lat==${net.latitude} lng==${net.longitude}")
-            LogUtils.d("$TAG getNetworkLocation lat==${net.latitude} lng==${net.longitude}")
+            LogUtils.d(TAG, "getNetworkLocation lat==${net.latitude} lng==${net.longitude}")
         }
     }
 
@@ -92,10 +92,10 @@ class SampleLocationActivity : AppCompatActivity() {
         val best = LocationUtils.getBestLocation(this)
         if (best == null) {
             showTv("getBestLocation gps location is null")
-            LogUtils.d("$TAG getBestLocation gps location is null")
+            LogUtils.d(TAG, "getBestLocation gps location is null")
         } else {
             showTv("getNetworkLocation lat==${best.latitude} lng==${best.longitude}")
-            LogUtils.d("$TAG getNetworkLocation lat==${best.latitude} lng==${best.longitude}")
+            LogUtils.d(TAG, "getNetworkLocation lat==${best.latitude} lng==${best.longitude}")
         }
     }
 
@@ -137,10 +137,13 @@ class SampleLocationActivity : AppCompatActivity() {
                 override fun onSuccessLocation(location: Location?) {
                     if (location != null) {
                         showTv("onSuccessLocation lat==${location.latitude} lng==${location.longitude}")
-                        LogUtils.d("$TAG onSuccessLocation lat==${location.latitude} lng==${location.longitude}")
+                        LogUtils.d(
+                            TAG,
+                            "onSuccessLocation lat==${location.latitude} lng==${location.longitude}"
+                        )
                     } else {
                         showTv("onSuccessLocation gps location is null")
-                        LogUtils.d("$TAG onSuccessLocation gps location is null")
+                        LogUtils.d(TAG, "onSuccessLocation gps location is null")
                     }
                 }
             })

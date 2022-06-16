@@ -18,7 +18,7 @@ import androidx.core.app.ActivityCompat
  */
 object LocationUtils {
 
-    private const val REFRESH_TIME = 300L
+    private const val REFRESH_TIME = 10000L
     private const val METER_POSITION = 0.0f
     private var mLocationListener: ILocationListener? = null
     private var listener: LocationListener = MyLocationListener()

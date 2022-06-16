@@ -1,34 +1,42 @@
 package com.power.http
 
-import com.blankj.utilcode.util.EncryptUtils
 import com.blankj.utilcode.util.GsonUtils
-import com.blankj.utilcode.util.LogUtils
-import com.google.gson.JsonSyntaxException
+import com.power.base.BaseSingleton
+import com.power.base.utils.LogUtils
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.Buffer
 import java.io.IOException
 import java.nio.charset.Charset
-import java.text.SimpleDateFormat
-import java.util.*
 import java.util.concurrent.TimeUnit
+
 
 /**
  * 作者：Gongsensen
  * 日期：2022/5/19
  * 说明：网络请求工具类
  */
-object EasyRequest {
-    private const val LOG_TAG = "HttpUtils"
-    private const val TIME_OUT = 20L //超时时间
-    private const val TAG = "HTTP_TAG" //TAG
-    private val UTF8 = Charset.forName("UTF-8")
+class EasyRequest {
+    companion object {
+        private const val TAG = "EasyRequest"
 
-    /**
-     * Post请求的MediaType 默认json字符串格式
-     */
-    private const val jsonMediaType = "application/json; charset=utf-8"
+        //超时时间
+        private const val TIME_OUT = 20L
+        private val UTF8 = Charset.forName("UTF-8")
+
+        //Post请求的MediaType 默认json字符串格式
+        private const val jsonMediaType = "application/json; charset=utf-8"
+
+        fun getInstance(): EasyRequest {
+            return object : BaseSingleton<EasyRequest>() {
+                override fun newInstance(): EasyRequest {
+                    return EasyRequest()
+                }
+            }.instance
+        }
+    }
+
 
     /**
      * 网络拦截器
@@ -41,8 +49,9 @@ object EasyRequest {
         val headers = request.headers
         val responseBody = responseBody(response)
         val requestTime = System.currentTimeMillis() - startTime
-        LogUtils.i(
-            "-->Request \nrequestTime:$requestTime \nurl:${request.url} \nheaders:$headers \nrequestBody:$requestBody \nresponseBody:$responseBody"
+        LogUtils.d(
+            TAG,
+            "-->Request \nRequestTime:$requestTime \nURL:${request.url} \nHeaders:$headers \nRequestBody:$requestBody \nResponseBody:$responseBody"
         )
         response
     }
@@ -61,30 +70,38 @@ object EasyRequest {
         .build()
 
     /**
-     * okHttpClient对象构建
-     * 不添加networkInterceptor
-     */
-    private var okHttpClientNoLog = OkHttpClient.Builder()
-        .callTimeout(TIME_OUT, TimeUnit.SECONDS)//完整请求超时时长，从发起到接收返回数据，默认值0，不限定,
-        .connectTimeout(TIME_OUT, TimeUnit.SECONDS)//与服务器建立连接的时长，默认10s
-        .readTimeout(TIME_OUT, TimeUnit.SECONDS)//读取服务器返回数据的时长
-        .writeTimeout(TIME_OUT, TimeUnit.SECONDS)//向服务器写入数据的时长，默认10s
-        .retryOnConnectionFailure(true)
-        .cookieJar(CookieJar.NO_COOKIES)
-        .build()
-
-    /**
-     * Post请求 调用票机OpenApi接口时
+     * Get请求
      * @param url
      * @param tag
      * @param param
-     * @param printLog
      */
-    fun postForJson(url: String, tag: Any? = TAG, param: Any?): String? {
+    fun get(url: String, tag: Any? = TAG): String? {
+        try {
+            val request = Request.Builder()
+                .url(url)
+                .get()
+                .cacheControl(CacheControl.FORCE_NETWORK)
+                .tag(tag)
+                .build()
+            val response = okHttpClient.newCall(request).execute()
+            return response.body?.string()
+        } catch (e: Exception) {
+            LogUtils.e(TAG, "get error:$e")
+            return e.toString()
+        }
+    }
+
+    /**
+     * Post请求 json格式参数
+     * @param url 接口地址
+     * @param tag 请求标识，可根据tag主动取消请求
+     * @param entity 对象序列化为json类型参数
+     */
+    fun postJson(url: String, tag: Any? = TAG, entity: Any?): String? {
         try {
             val mediaType = jsonMediaType.toMediaTypeOrNull()
-            val data = GsonUtils.toJson(param)
-            val requestBody = data.toRequestBody(mediaType)
+            val json = GsonUtils.toJson(entity)
+            val requestBody = json.toRequestBody(mediaType)
             val request = Request.Builder()
                 .url(url)
                 .post(requestBody)
@@ -94,125 +111,37 @@ object EasyRequest {
             val response = okHttpClient.newCall(request).execute()
             return response.body?.string()
         } catch (e: Exception) {
-            LogUtils.e("$TAG post error:$e")
+            LogUtils.e(TAG, "postJson error:$e")
             return e.toString()
         }
     }
 
 
     /**
-     * 默认添加拦截器打印日志，添加header请求头参数，Post异步请求
+     * Post请求 Form表单形式
      * @param url
      * @param tag
-     * @param param
-     * @param callback
-     * @return 返回的是List
+     * @param map 表单数据
      */
-    fun postRequestList(
-        url: String,
-        tag: Any? = TAG,
-        param: Any?,
-    ): NetListRsp? {
+    fun postForm(url: String, tag: Any? = TAG, map: Map<String, String>?): String? {
         try {
-            val response = doPostRequest(NetConstants.getUrl() + url, tag, param)
-            val json = response.body?.string()
-            LogUtils.d("$TAG postRequestList rsp-json:$json")
-            val rspList: NetListRsp? = GsonUtils.fromJson(json, NetListRsp::class.java)
-            LogUtils.d("$TAG postRequestList NetListRsp:$rspList")
-            //网络异常，返回
-            if (response.code != NetConstants.RESULT_OK) {
-                return NetListRsp(NetConstants.RESULT_NOT_OK, "Network Error", null, false)
+            val builder = FormBody.Builder()
+            map?.iterator()?.forEach {
+                builder.add(it.key, it.key)
             }
-            return rspList
-        } catch (e: JsonSyntaxException) {
-            LogUtils.e("$LOG_TAG postRequest error:$e")
-            return NetListRsp(
-                NetConstants.RESULT_JSON_SYNTAX_EXCEPTION, "JsonSyntaxException", null, false
-            )
-        } catch (e: IOException) {
-            LogUtils.e("$LOG_TAG postRequest error:$e")
-            return NetListRsp(
-                NetConstants.RESULT_IO_EXCEPTION, "IOException", null, false
-            )
-        } catch (e: ClassCastException) {
-            LogUtils.e("$LOG_TAG postRequest error:$e")
-            return NetListRsp(
-                NetConstants.RESULT_CLASS_CAST_EXCEPTION, "ClassCastException", null, false
-            )
+            val formBody: RequestBody = builder.build()
+            val request = Request.Builder()
+                .url(url)
+                .post(formBody)
+                .cacheControl(CacheControl.FORCE_NETWORK)
+                .tag(tag)
+                .build()
+            val response = okHttpClient.newCall(request).execute()
+            return response.body?.string()
         } catch (e: Exception) {
-            LogUtils.e("$LOG_TAG postRequest error:$e")
-            return NetListRsp(
-                NetConstants.RESULT_EXCEPTION, "Exception", null, false
-            )
+            LogUtils.e(TAG, "postForm error:$e")
+            return e.toString()
         }
-    }
-
-    /**
-     * 默认添加拦截器打印日志，添加header请求头参数，Post异步请求
-     * @param url
-     * @param tag
-     * @param param
-     * @param callback
-     * @return 返回的是单独对象
-     */
-    fun postRequest(
-        url: String,
-        tag: Any? = TAG,
-        param: Any?,
-    ): NetRsp? {
-        try {
-            val response = doPostRequest(NetConstants.getUrl() + url, tag, param)
-            val json = response.body?.string()
-            LogUtils.d("$TAG postRequest rsp-json:$json")
-            val rsp: NetRsp? = GsonUtils.fromJson(json, NetRsp::class.java)
-            LogUtils.d("$TAG postRequest NetRsp:$rsp")
-            //网络异常，返回
-            if (response.code != NetConstants.RESULT_OK) {
-                return NetRsp(NetConstants.RESULT_NOT_OK, "Network Error", "", false)
-            }
-            return rsp
-        } catch (e: JsonSyntaxException) {
-            LogUtils.e("$LOG_TAG postRequest error:$e")
-            return NetRsp(
-                NetConstants.RESULT_JSON_SYNTAX_EXCEPTION, "JsonSyntaxException", "", false
-            )
-        } catch (e: IOException) {
-            LogUtils.e("$LOG_TAG postRequest error:$e")
-            return NetRsp(
-                NetConstants.RESULT_IO_EXCEPTION, "IOException", "", false
-            )
-        } catch (e: ClassCastException) {
-            LogUtils.e("$LOG_TAG postRequest error:$e")
-            return NetRsp(
-                NetConstants.RESULT_CLASS_CAST_EXCEPTION, "ClassCastException", "", false
-            )
-        } catch (e: Exception) {
-            LogUtils.e("$LOG_TAG postRequest error:$e")
-            return NetRsp(
-                NetConstants.RESULT_EXCEPTION, "Exception", "", false
-            )
-        }
-    }
-
-    /**
-     * 获取数据以String返回
-     */
-    private fun doPostRequest(
-        url: String,
-        tag: Any? = TAG,
-        param: Any?
-    ): Response {
-        val mediaType = jsonMediaType.toMediaTypeOrNull()
-        val json = GsonUtils.toJson(param)
-        val requestBody = json.toRequestBody(mediaType)
-        val request = Request.Builder()
-            .url(url)
-            .post(requestBody)
-            .headers(buildHeaders(json))
-            .cacheControl(CacheControl.FORCE_NETWORK)
-            .tag(tag)
-            .build()
-        return okHttpClient.newCall(request).execute()
     }
 
     /**
@@ -246,27 +175,18 @@ object EasyRequest {
     }
 
     /**
-     * 业务内接口校验请求头
-     * TODO header参数还未确认，先写死
+     * 添加 header
      */
-    private fun buildHeaders(json: String?): Headers {
+    fun buildHeaders(map: HashMap<String, String>?): Headers {
         val header = Headers.Builder()
-        val header1 = ""
-        val header2 = " "
-        header.add("header1", header1)
-        header.add("header2", header2)
+        map?.iterator()?.forEach {
+            header.add(it.key, it.value)
+        }
         return header.build()
     }
 
     /**
-     * MD5加密
-     */
-    fun generateEncryptMd5(string: String?): String? {
-        return EncryptUtils.encryptMD5ToString(string)
-    }
-
-    /**
-     * 取消网络请求
+     * 取消指定网络请求
      * @param tag
      */
     fun cancel(tag: Any? = TAG) {

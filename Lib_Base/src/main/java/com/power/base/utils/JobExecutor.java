@@ -146,24 +146,16 @@ public class JobExecutor {
             }
 
             private void postOnMainThread(final Task<T> task, final T res) {
-                //noinspection Convert2Lambda
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        task.onMainThread(res);
-                        task.onJobCompleted();
-                    }
+                mHandler.post(() -> {
+                    task.onMainThread(res);
+                    task.onJobCompleted();
                 });
             }
 
             private void postOnMainThread(String errMsg) {
-                //noinspection Convert2Lambda
-                mHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        task.onJobError(errMsg);
-                        task.onJobCompleted();
-                    }
+                mHandler.post(() -> {
+                    task.onJobError(errMsg);
+                    task.onJobCompleted();
                 });
             }
         });
@@ -182,11 +174,11 @@ public class JobExecutor {
 
     public interface Task<T> extends Callable<T> {
         default void onMainThread(T result) {
-            // default no implementation
+
         }
 
         default void onJobThread(T result) {
-            // default no implementation
+
         }
 
         default void onJobError(String msg) {

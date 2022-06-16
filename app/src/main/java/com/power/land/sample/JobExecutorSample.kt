@@ -1,6 +1,7 @@
 package com.power.land.sample
 
 import com.power.base.utils.JobExecutor
+import com.power.http.EasyRequest
 import java.util.concurrent.Future
 
 /**
@@ -14,7 +15,7 @@ class JobExecutorSample {
     fun jobTest() {
         future?.cancel(true)
         future = JobExecutor.instance().submit(object : JobExecutor.Task<String> {
-            override fun call(): String {
+            override fun call(): String? {
                 //在此异步执行耗时任务，并返回值
                 return mockNetData()
             }
@@ -28,9 +29,8 @@ class JobExecutorSample {
         })
     }
 
-    fun mockNetData(): String {
-        return "模拟网络数据返回"
+    fun mockNetData(): String? {
+        return EasyRequest.getInstance().get("https://www.baidu.com", "")
     }
-
 
 }
